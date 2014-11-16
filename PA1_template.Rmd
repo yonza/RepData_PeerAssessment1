@@ -8,18 +8,103 @@ output:
 
 ## Loading and preprocessing the data
 
+First I will load the data into R:
 
+```{r}
+rawData <- read.csv('activity.csv')
+```
 
 ## What is mean total number of steps taken per day?
 
+I will now make a collapsed dataset that reports the mean and median by day:
 
+```{r, echo=FALSE}
+meanByDay<-aggregate(rawData$steps, by = list(rawData$date), FUN = mean, na.rm = T)
+medianByDay<-aggregate(rawData$steps, by = list(rawData$date), FUN = median, na.rm = T)
+
+cbind(meanByDay, medianByDay[,2])
+```
+
+I will now generate a histogram showing the total number of steps taken per day
+
+```{r}
+byDay <- aggregate(rawData$steps, by=list(rawData$date), FUN = sum, na.rm = T)
+library(ggplot2)
+qplot(byDay$x, geom='histogram', data=byDay,  binwidth = 1000, xlab='Number of steps')
+
+```
 
 ## What is the average daily activity pattern?
 
+Below is a time-series plot by 5 minute interval throughout the day, averaged over each day:
 
+```{r}
+z <- aggregate(rawData$steps, by = list(rawData$interval), FUN = mean, na.rm=T)
+
+max(z$x)
+
+
+g <- ggplot(z, aes(Group.1, x)) + geom_line() + xlab('5-minute time intervals')
+g
+```
 
 ## Imputing missing values
 
+The total number of missing values in the dataset is:
+
+```{r}
+sum(is.na(rawData))
+```
+
+Now I will replace all NA's with the mean for that day.  I will use this new dataset to calculate a new mean for each day as well as the corresponding histogram of the sum. 
+
+```{r}
+
+
+temp<-merge(rawData, meanByDay, by.x='date', by.y='Group.1')
+
+for(i in 1:length(temp[,1])){
+  
+  if(is.na(temp[i,2])){
+    temp[i,2] <- temp[i,4]
+  }
+}
+
+aggregate(temp$steps, by = list(temp$date), FUN = mean)
+
+m <- aggregate(temp$steps, by = list(temp$date), FUN = sum)
+
+ggplot(m, aes(x)) + geom_histogram(binwidth=1000)
+
+```
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+
+Finally I will split the data by weekend or weekday and mike a final plot:
+
+```{r}
+
+rawData$weekday <- weekdays(as.Date(rawData$date))
+rawData$recoded <- ifelse(rawData$weekday == "Saturday" | rawData$weekday == "Sunday",'Weekend','Weekday')
+
+g <- aggregate(rawData$steps, by = list(rawData$interval, rawData$recoded), FUN = mean, na.rm=T)
+
+ggplot(g, aes(Group.1, x)) + geom_line() + facet_grid(Group.2 ~ .) + xlab('5-minute intervals')
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
